@@ -1,0 +1,134 @@
+[
+    {
+        "merged": "com.atheer.demo.demo-app-debug-43:/menu_bottom_nav_customer.xml.flat",
+        "source": "com.atheer.demo.demo-app-main-45:/menu/bottom_nav_customer.xml"
+    },
+    {
+        "merged": "com.atheer.demo.demo-app-debug-43:/layout_activity_dashboard.xml.flat",
+        "source": "com.atheer.demo.demo-app-main-45:/layout/activity_dashboard.xml"
+    },
+    {
+        "merged": "com.atheer.demo.demo-app-debug-43:/drawable_ic_credit_card.xml.flat",
+        "source": "com.atheer.demo.demo-app-main-45:/drawable/ic_credit_card.xml"
+    },
+    {
+        "merged": "com.atheer.demo.demo-app-debug-43:/xml_atheer_apdu_service.xml.flat",
+        "source": "com.atheer.demo.demo-app-main-45:/xml/atheer_apdu_service.xml"
+    },
+    {
+        "merged": "com.atheer.demo.demo-app-debug-43:/drawable_bg_card_white.xml.flat",
+        "source": "com.atheer.demo.demo-app-main-45:/drawable/bg_card_white.xml"
+    },
+    {
+        "merged": "com.atheer.demo.demo-app-debug-43:/drawable_bg_success_circle.xml.flat",
+        "source": "com.atheer.demo.demo-app-main-45:/drawable/bg_success_circle.xml"
+    },
+    {
+        "merged": "com.atheer.demo.demo-app-debug-43:/layout_activity_login.xml.flat",
+        "source": "com.atheer.demo.demo-app-main-45:/layout/activity_login.xml"
+    },
+    {
+        "merged": "com.atheer.demo.demo-app-debug-43:/layout_activity_register.xml.flat",
+        "source": "com.atheer.demo.demo-app-main-45:/layout/activity_register.xml"
+    },
+    {
+        "merged": "com.atheer.demo.demo-app-debug-43:/drawable_ic_check_circle.xml.flat",
+        "source": "com.atheer.demo.demo-app-main-45:/drawable/ic_check_circle.xml"
+    },
+    {
+        "merged": "com.atheer.demo.demo-app-debug-43:/drawable_bg_bottom_sheet.xml.flat",
+        "source": "com.atheer.demo.demo-app-main-45:/drawable/bg_bottom_sheet.xml"
+    },
+    {
+        "merged": "com.atheer.demo.demo-app-debug-43:/drawable_ic_nfc.xml.flat",
+        "source": "com.atheer.demo.demo-app-main-45:/drawable/ic_nfc.xml"
+    },
+    {
+        "merged": "com.atheer.demo.demo-app-debug-43:/layout_item_transaction.xml.flat",
+        "source": "com.atheer.demo.demo-app-main-45:/layout/item_transaction.xml"
+    },
+    {
+        "merged": "com.atheer.demo.demo-app-debug-43:/layout_layout_receive_payment.xml.flat",
+        "source": "com.atheer.demo.demo-app-main-45:/layout/layout_receive_payment.xml"
+    },
+    {
+        "merged": "com.atheer.demo.demo-app-debug-43:/mipmap-anydpi-v26_ic_launcher_round.xml.flat",
+        "source": "com.atheer.demo.demo-app-main-45:/mipmap-anydpi-v26/ic_launcher_round.xml"
+    },
+    {
+        "merged": "com.atheer.demo.demo-app-debug-43:/drawable_custom_progress_circle.xml.flat",
+        "source": "com.atheer.demo.demo-app-main-45:/drawable/custom_progress_circle.xml"
+    },
+    {
+        "merged": "com.atheer.demo.demo-app-debug-43:/drawable_ic_atheer_logo.xml.flat",
+        "source": "com.atheer.demo.demo-app-main-45:/drawable/ic_atheer_logo.xml"
+    },
+    {
+        "merged": "com.atheer.demo.demo-app-debug-43:/drawable_ic_pos_terminal.xml.flat",
+        "source": "com.atheer.demo.demo-app-main-45:/drawable/ic_pos_terminal.xml"
+    },
+    {
+        "merged": "com.atheer.demo.demo-app-debug-43:/layout_activity_payment_success.xml.flat",
+        "source": "com.atheer.demo.demo-app-main-45:/layout/activity_payment_success.xml"
+    },
+    {
+        "merged": "com.atheer.demo.demo-app-debug-43:/layout_activity_merchant_main.xml.flat",
+        "source": "com.atheer.demo.demo-app-main-45:/layout/activity_merchant_main.xml"
+    },
+    {
+        "merged": "com.atheer.demo.demo-app-debug-43:/layout_activity_transaction_result.xml.flat",
+        "source": "com.atheer.demo.demo-app-main-45:/layout/activity_transaction_result.xml"
+    },
+    {
+        "merged": "com.atheer.demo.demo-app-debug-43:/layout_activity_customer_main.xml.flat",
+        "source": "com.atheer.demo.demo-app-main-45:/layout/activity_customer_main.xml"
+    },
+    {
+        "merged": "com.atheer.demo.demo-app-debug-43:/mipmap-anydpi-v26_ic_launcher.xml.flat",
+        "source": "com.atheer.demo.demo-app-main-45:/mipmap-anydpi-v26/ic_launcher.xml"
+    },
+    {
+        "merged": "com.atheer.demo.demo-app-debug-43:/drawable_bg_gradient_primary.xml.flat",
+        "source": "com.atheer.demo.demo-app-main-45:/drawable/bg_gradient_primary.xml"
+    },
+    {
+        "merged": "com.atheer.demo.demo-app-debug-43:/menu_bottom_nav_merchant.xml.flat",
+        "source": "com.atheer.demo.demo-app-main-45:/menu/bottom_nav_merchant.xml"
+    },
+    {
+        "merged": "com.atheer.demo.demo-app-debug-43:/drawable_bg_error_circle.xml.flat",
+        "source": "com.atheer.demo.demo-app-main-45:/drawable/bg_error_circle.xml"
+    },
+    {
+        "merged": "com.atheer.demo.demo-app-debug-43:/drawable_bg_card_pos.xml.flat",
+        "source": "com.atheer.demo.demo-app-main-45:/drawable/bg_card_pos.xml"
+    },
+    {
+        "merged": "com.atheer.demo.demo-app-debug-43:/drawable_bg_nfc_circle.xml.flat",
+        "source": "com.atheer.demo.demo-app-main-45:/drawable/bg_nfc_circle.xml"
+    },
+    {
+        "merged": "com.atheer.demo.demo-app-debug-43:/drawable_ic_error_circle.xml.flat",
+        "source": "com.atheer.demo.demo-app-main-45:/drawable/ic_error_circle.xml"
+    },
+    {
+        "merged": "com.atheer.demo.demo-app-debug-43:/layout_bottom_sheet_nfc.xml.flat",
+        "source": "com.atheer.demo.demo-app-main-45:/layout/bottom_sheet_nfc.xml"
+    },
+    {
+        "merged": "com.atheer.demo.demo-app-debug-43:/layout_activity_splash.xml.flat",
+        "source": "com.atheer.demo.demo-app-main-45:/layout/activity_splash.xml"
+    },
+    {
+        "merged": "com.atheer.demo.demo-app-debug-43:/layout_activity_pos.xml.flat",
+        "source": "com.atheer.demo.demo-app-main-45:/layout/activity_pos.xml"
+    },
+    {
+        "merged": "com.atheer.demo.demo-app-debug-43:/layout_activity_customer.xml.flat",
+        "source": "com.atheer.demo.demo-app-main-45:/layout/activity_customer.xml"
+    },
+    {
+        "merged": "com.atheer.demo.demo-app-debug-43:/drawable_bg_card_customer.xml.flat",
+        "source": "com.atheer.demo.demo-app-main-45:/drawable/bg_card_customer.xml"
+    }
+]

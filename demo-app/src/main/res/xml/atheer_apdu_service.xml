@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    تعريف خدمة HCE (Host Card Emulation) لـ Atheer SDK
+    يُحدد AID الخاص بالتطبيق لتمييزه عن باقي التطبيقات عند القراءة بـ NFC
+-->
+<host-apdu-service
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:description="@string/atheer_hce_description"
+    android:requireDeviceUnlock="false">
+
+    <aid-group
+        android:category="payment"
+        android:description="@string/atheer_payment_description">
+
+        <aid-filter android:name="A000000003101001" />
+
+        <aid-filter android:name="A0000000031010" />
+
+    </aid-group>
+</host-apdu-service>

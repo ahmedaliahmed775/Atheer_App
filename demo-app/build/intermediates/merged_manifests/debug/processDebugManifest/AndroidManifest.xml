@@ -1,0 +1,175 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    AndroidManifest.xml لتطبيق Atheer Demo
+    يحتوي على إعلانات الأنشطة والصلاحيات اللازمة
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.atheer.demo.debug"
+    android:versionCode="1"
+    android:versionName="1.0.0" >
+
+    <uses-sdk
+        android:minSdkVersion="26"
+        android:targetSdkVersion="34" />
+
+    <!-- صلاحية NFC -->
+    <uses-permission android:name="android.permission.NFC" />
+    <!-- صلاحيات الشبكة -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <!-- صلاحية الاهتزاز -->
+    <uses-permission android:name="android.permission.VIBRATE" />
+    <!-- صلاحية البيومترية -->
+    <uses-permission android:name="android.permission.USE_BIOMETRIC" />
+
+    <!-- NFC اختياري حتى يعمل التطبيق على أجهزة بدون NFC -->
+    <uses-feature
+        android:name="android.hardware.nfc"
+        android:required="false" />
+    <uses-feature
+        android:name="android.hardware.nfc.hce"
+        android:required="false" />
+
+    <!-- صلاحية تغيير حالة الشبكة لتوجيه الطلبات عبر الشبكة الخلوية -->
+    <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE" /> <!-- suppress DeprecatedClassUsageInspection -->
+    <uses-permission android:name="android.permission.USE_FINGERPRINT" />
+
+    <permission
+        android:name="com.atheer.demo.debug.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
+        android:protectionLevel="signature" />
+
+    <uses-permission android:name="com.atheer.demo.debug.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION" />
+
+    <application
+        android:name="com.atheer.demo.AtheerDemoApp"
+        android:allowBackup="true"
+        android:appComponentFactory="androidx.core.app.CoreComponentFactory"
+        android:debuggable="true"
+        android:extractNativeLibs="false"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.AtheerDemo" >
+
+        <!-- شاشة البداية (Splash) -->
+        <activity
+            android:name="com.atheer.demo.ui.SplashActivity"
+            android:exported="true"
+            android:theme="@style/Theme.AtheerDemo.Splash" >
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- شاشة تسجيل الدخول -->
+        <activity
+            android:name="com.atheer.demo.ui.login.LoginActivity"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize" />
+
+        <!-- لوحة التحكم: اختيار المسار -->
+        <activity
+            android:name="com.atheer.demo.ui.dashboard.DashboardActivity"
+            android:exported="false" />
+
+        <!-- الشاشة الرئيسية للعميل -->
+        <activity
+            android:name="com.atheer.demo.ui.customer.CustomerMainActivity"
+            android:exported="false" />
+
+        <!-- الشاشة الرئيسية للتاجر -->
+        <activity
+            android:name="com.atheer.demo.ui.merchant.MerchantMainActivity"
+            android:exported="false" />
+
+        <!-- مسار العميل: محاكاة البطاقة (HCE) -->
+        <activity
+            android:name="com.atheer.demo.ui.customer.CustomerActivity"
+            android:exported="false" />
+
+        <!-- مسار نقطة المبيعات (SoftPOS) -->
+        <activity
+            android:name="com.atheer.demo.ui.pos.PosActivity"
+            android:exported="false" />
+
+        <!-- شاشة نتيجة المعاملة -->
+        <activity
+            android:name="com.atheer.demo.ui.result.TransactionResultActivity"
+            android:exported="false" />
+
+        <!-- شاشة نجاح الدفع (شفافة) -->
+        <activity
+            android:name="com.atheer.demo.ui.payment.PaymentSuccessActivity"
+            android:exported="false"
+            android:theme="@style/Theme.AtheerDemo.Translucent" />
+        <activity
+            android:name="com.atheer.demo.ui.login.RegisterActivity"
+            android:exported="false" />
+
+        <!--
+            خدمة HCE - محاكاة بطاقة NFC للمدفوعات بدون إنترنت
+            يجب أن تكون هذه الخدمة مُصدَّرة حتى يتمكن نظام Android من استدعائها
+            عند الاقتراب من جهاز قارئ NFC
+        -->
+        <service
+            android:name="com.atheer.sdk.hce.AtheerApduService"
+            android:exported="true"
+            android:permission="android.permission.BIND_NFC_SERVICE" >
+            <intent-filter>
+
+                <!-- هذا الفلتر يخبر النظام أن الخدمة تدعم محاكاة بطاقة NFC -->
+                <action android:name="android.nfc.cardemulation.action.HOST_APDU_SERVICE" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+            <!-- ملف XML الذي يصف AIDs (معرفات التطبيق) المدعومة -->
+            <meta-data
+                android:name="android.nfc.cardemulation.host_apdu_service"
+                android:resource="@xml/apduservice" />
+        </service>
+
+        <provider
+            android:name="androidx.startup.InitializationProvider"
+            android:authorities="com.atheer.demo.debug.androidx-startup"
+            android:exported="false" >
+            <meta-data
+                android:name="androidx.emoji2.text.EmojiCompatInitializer"
+                android:value="androidx.startup" />
+            <meta-data
+                android:name="androidx.lifecycle.ProcessLifecycleInitializer"
+                android:value="androidx.startup" />
+            <meta-data
+                android:name="androidx.profileinstaller.ProfileInstallerInitializer"
+                android:value="androidx.startup" />
+        </provider>
+
+        <service
+            android:name="androidx.room.MultiInstanceInvalidationService"
+            android:directBootAware="true"
+            android:exported="false" />
+
+        <receiver
+            android:name="androidx.profileinstaller.ProfileInstallReceiver"
+            android:directBootAware="false"
+            android:enabled="true"
+            android:exported="true"
+            android:permission="android.permission.DUMP" >
+            <intent-filter>
+                <action android:name="androidx.profileinstaller.action.INSTALL_PROFILE" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="androidx.profileinstaller.action.SKIP_FILE" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="androidx.profileinstaller.action.SAVE_PROFILE" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="androidx.profileinstaller.action.BENCHMARK_OPERATION" />
+            </intent-filter>
+        </receiver>
+    </application>
+
+</manifest>

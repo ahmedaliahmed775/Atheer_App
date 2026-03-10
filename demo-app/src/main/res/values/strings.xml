@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- اسم التطبيق -->
+    <string name="app_name">أثير - محفظة المدفوعات</string>
+
+    <!-- شاشة البداية -->
+    <string name="splash_tagline">مدفوعات NFC ذكية وآمنة</string>
+
+    <!-- شاشة تسجيل الدخول -->
+    <string name="login_title">تسجيل الدخول</string>
+    <string name="login_subtitle">أدخل بياناتك للمتابعة</string>
+    <string name="hint_merchant_id">البريد الإلكتروني</string>
+    <string name="hint_password">كلمة المرور</string>
+    <string name="btn_login">دخول</string>
+    <string name="login_error_empty">يرجى تعبئة جميع الحقول</string>
+    <string name="login_error_invalid">البريد الإلكتروني أو كلمة المرور غير صحيحة</string>
+    <string name="login_demo_hint">أدخل بيانات حسابك المسجل على الخادم</string>
+
+    <!-- شاشة لوحة التحكم -->
+    <string name="dashboard_title">اختر المسار</string>
+    <string name="dashboard_subtitle">حدد نوع الاستخدام للمتابعة</string>
+    <string name="card_customer_title">مسار العميل</string>
+    <string name="card_customer_desc">استخدام الهاتف كبطاقة دفع NFC لاتلامسية</string>
+    <string name="card_pos_title">نقطة المبيعات</string>
+    <string name="card_pos_desc">استخدام الهاتف كجهاز استقبال مدفوعات SoftPOS</string>
+    <string name="btn_logout">تسجيل خروج</string>
+    <string name="merchant_id_label">رقم التاجر: %s</string>
+
+    <!-- شاشة العميل الرئيسية -->
+    <string name="welcome_customer">أهلاً بك</string>
+    <string name="customer_home_subtitle">محفظتك الرقمية الذكية</string>
+    <string name="balance_label">الرصيد المتاح</string>
+    <string name="toggle_balance">إظهار/إخفاء الرصيد</string>
+    <string name="services_title">الخدمات</string>
+    <string name="service_recharge">شحن</string>
+    <string name="service_bills">فواتير</string>
+    <string name="service_transfer">تحويل</string>
+    <string name="btn_atheer_pay">ادفع بأثير</string>
+
+    <!-- المصادقة البيومترية -->
+    <string name="biometric_title">تأكيد الهوية</string>
+    <string name="biometric_subtitle">استخدم بصمة الإصبع أو الوجه للمتابعة</string>
+    <string name="biometric_cancel">إلغاء</string>
+
+    <!-- NFC BottomSheet -->
+    <string name="nfc_ready_to_pay">جاهز للدفع</string>
+    <string name="nfc_tap_instruction">اقترب بهاتفك من جهاز نقطة البيع</string>
+
+    <!-- نجاح الدفع -->
+    <string name="payment_success_message">تمت عملية الدفع بنجاح ✓</string>
+
+    <!-- شاشة العميل القديمة (HCE) -->
+    <string name="customer_title">مسار العميل</string>
+    <string name="customer_nfc_ready">جاهز للدفع</string>
+    <string name="customer_nfc_tap">اقترب من جهاز نقطة البيع للدفع</string>
+    <string name="hint_amount">المبلغ (بالهللة)</string>
+    <string name="hint_card_number">رقم البطاقة</string>
+    <string name="btn_prepare_payment">تجهيز الدفع</string>
+    <string name="payment_ready">✓ الدفع جاهز — اقترب من القارئ</string>
+    <string name="payment_preparing">جارٍ التجهيز…</string>
+    <string name="hce_status_idle">في انتظار بيانات الدفع</string>
+    <string name="hce_status_ready">جاهز للدفع اللاتلامسي</string>
+    <string name="error_invalid_amount">يرجى إدخال مبلغ صحيح</string>
+    <string name="error_invalid_card">يرجى إدخال رقم بطاقة صحيح (16 رقمًا)</string>
+
+    <!-- شاشة التاجر الرئيسية -->
+    <string name="merchant_home_title">نقطة المبيعات</string>
+    <string name="merchant_home_subtitle">جاهز لاستقبال المدفوعات</string>
+    <string name="amount_to_charge">المبلغ المطلوب تحصيله</string>
+    <string name="btn_receive_payment">استقبال الدفع</string>
+    <string name="btn_clear">مسح</string>
+    <string name="merchant_settings_title">إعدادات التاجر</string>
+    <string name="charge_success">تم تحصيل المبلغ بنجاح ✓</string>
+    <string name="charge_failed">فشل تحصيل المبلغ</string>
+    <string name="processing">جارٍ المعالجة…</string>
+
+    <!-- شاشة نقطة المبيعات القديمة (SoftPOS) -->
+    <string name="pos_title">نقطة المبيعات</string>
+    <string name="pos_waiting">في انتظار بطاقة العميل…</string>
+    <string name="pos_tap_card">قرّب بطاقة العميل أو هاتفه من الجهاز</string>
+    <string name="pos_reading">جارٍ قراءة البطاقة…</string>
+    <string name="pos_nfc_unavailable">NFC غير متاح على هذا الجهاز</string>
+    <string name="pos_enable_nfc">يرجى تفعيل NFC من إعدادات الجهاز</string>
+    <string name="btn_open_nfc_settings">فتح إعدادات NFC</string>
+    <string name="hint_pos_amount">المبلغ المطلوب (بالهللة)</string>
+    <string name="btn_start_reading">ابدأ القراءة</string>
+    <string name="btn_stop_reading">إيقاف</string>
+
+    <!-- شاشة النتيجة -->
+    <string name="result_success_title">تمت العملية بنجاح</string>
+    <string name="result_failed_title">فشلت العملية</string>
+    <string name="result_transaction_id">رقم المعاملة</string>
+    <string name="result_amount_label">المبلغ</string>
+    <string name="result_currency_label">العملة</string>
+    <string name="result_merchant_label">رقم التاجر</string>
+    <string name="result_timestamp_label">وقت المعاملة</string>
+    <string name="result_status_synced">مزامنة ✓</string>
+    <string name="result_status_offline">محلي (غير متزامن)</string>
+    <string name="btn_new_transaction">معاملة جديدة</string>
+    <string name="btn_back_dashboard">العودة للرئيسية</string>
+
+    <!-- التنقل السفلي -->
+    <string name="nav_home">الرئيسية</string>
+    <string name="nav_history">السجل</string>
+    <string name="nav_settings">الإعدادات</string>
+
+    <!-- السجل -->
+    <string name="history_title">سجل المعاملات</string>
+    <string name="history_empty">لا توجد معاملات حتى الآن</string>
+    <string name="btn_sync_now">مزامنة الآن</string>
+    <string name="syncing">جارٍ المزامنة…</string>
+
+    <!-- معلومات الإصدار -->
+    <string name="version_info">أثير v1.0.0 — NFC • HCE • SoftPOS</string>
+
+    <!-- رسائل عامة -->
+    <string name="loading">جارٍ التحميل…</string>
+    <string name="sar_currency">ريال سعودي</string>
+    <string name="nfc_tag_discovered">تم اكتشاف بطاقة NFC</string>
+    <string name="sdk_init_error">فشل تهيئة SDK. يرجى المحاولة مرة أخرى</string>
+    <string name="error_network">خطأ في الاتصال بالشبكة. يرجى المحاولة لاحقاً</string>
+    <string name="error_offline">غير متصل بالإنترنت</string>
+</resources>
