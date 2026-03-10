@@ -1,10 +1,22 @@
-*.iml
-.gradle
-/local.properties
-/.idea
-.DS_Store
-/build
-/captures
-.externalNativeBuild
-.cxx
+# ملفات البناء والنظام (الأكثر ثقلاً)
+/build/
+/*/build/
+.gradle/
+.externalNativeBuild/
+.cxx/
+/captures/
+
+# ملفات الإعدادات المحلية والخاصة بجهازك
 local.properties
+.DS_Store
+
+# ملفات بيئة التطوير (Android Studio / IntelliJ)
+.idea/
+*.iml
+.navigation/
+
+# ملفات السجل والأخطاء
+*.log
+
+# ملفات بيئة التشغيل والبيانات السرية
+.env
