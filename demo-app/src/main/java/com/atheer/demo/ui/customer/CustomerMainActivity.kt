@@ -24,7 +24,6 @@ import kotlinx.coroutines.launch
 
 /**
  * CustomerMainActivity — الشاشة الرئيسية للعميل
- * تعرض الرصيد والسجل باستخدام Retrofit
  */
 class CustomerMainActivity : AppCompatActivity() {
 
@@ -46,6 +45,8 @@ class CustomerMainActivity : AppCompatActivity() {
 
         // جلب البيانات عند فتح الشاشة
         loadBalance()
+        // جلب مفاتيح الدفع بصمت في الخلفية
+        provisionOfflineTokens(showFeedback = false)
     }
 
     private fun setupBottomNavigation() {
@@ -55,7 +56,8 @@ class CustomerMainActivity : AppCompatActivity() {
                     binding.layoutHome.visibility = View.VISIBLE
                     binding.layoutHistory.visibility = View.GONE
                     binding.layoutSettings.visibility = View.GONE
-                    loadBalance() // تحديث الرصيد عند العودة للرئيسية
+                    loadBalance() 
+                    provisionOfflineTokens(showFeedback = false)
                     true
                 }
                 R.id.nav_history -> {
@@ -106,23 +108,14 @@ class CustomerMainActivity : AppCompatActivity() {
             try {
                 val token = tokenManager.getAccessToken() ?: ""
                 val authHeader = if (token.startsWith("Bearer ")) token else "Bearer $token"
-
                 val response = RetrofitClient.apiService.getBalance(authHeader)
 
                 if (response.isSuccessful && response.body()?.data != null) {
                     currentBalance = response.body()!!.data!!.balance
                     updateBalanceDisplay()
                 } else {
-                    val errorBody = response.errorBody()?.string()
                     binding.tvBalance.text = "0.00"
-                    AlertDialog.Builder(this@CustomerMainActivity)
-                        .setTitle("تنبيه من السيرفر (الرصيد)")
-                        .setMessage(errorBody ?: "فشل جلب البيانات")
-                        .setPositiveButton("حسناً", null)
-                        .show()
                 }
-                // سيتم استدعاء الدالة لجلب التوكنز الحقيقية بصمت في الخلفية
-                provisionOfflineTokens()
             } catch (e: Exception) {
                 binding.tvBalance.text = getString(R.string.error_offline)
             }
@@ -130,24 +123,19 @@ class CustomerMainActivity : AppCompatActivity() {
     }
 
     private fun loadHistory() {
-        val context = this
         lifecycleScope.launch {
             try {
                 val token = tokenManager.getAccessToken() ?: ""
                 val authHeader = if (token.startsWith("Bearer ")) token else "Bearer $token"
+                val response = RetrofitClient.apiService.getHistory(authHeader)
 
-                // طلب السجل عبر Retrofit
-                val response = com.atheer.demo.data.network.RetrofitClient.apiService.getHistory(authHeader)
-
-                // التعديل الضروري: إضافة .data قبل .transactions
                 if (response.isSuccessful && response.body()?.data?.transactions != null) {
-                    val transactionsList = response.body()!!.data!!.transactions!!
-                    displayTransactions(transactionsList)
+                    displayTransactions(response.body()!!.data!!.transactions!!)
                 } else {
-                    android.widget.Toast.makeText(context, "لا يوجد سجل معاملات حالياً", android.widget.Toast.LENGTH_SHORT).show()
+                    binding.tvHistoryEmpty.visibility = View.VISIBLE
                 }
             } catch (e: Exception) {
-                android.widget.Toast.makeText(context, "خطأ في الشبكة: تعذر جلب السجل", android.widget.Toast.LENGTH_SHORT).show()
+                Toast.makeText(this@CustomerMainActivity, "خطأ في الشبكة", Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -155,48 +143,73 @@ class CustomerMainActivity : AppCompatActivity() {
     private fun displayTransactions(transactions: List<com.atheer.demo.data.model.TransactionItem>) {
         val container = binding.rvHistory
         container.removeAllViews()
-        for (txn in transactions) {
+        
+        if (transactions.isEmpty()) {
+            binding.tvHistoryEmpty.visibility = View.VISIBLE
+            return
+        }
+        
+        binding.tvHistoryEmpty.visibility = View.GONE
+
+        for (transaction in transactions) {
             val itemView = LayoutInflater.from(this).inflate(R.layout.item_transaction, container, false)
-            itemView.findViewById<TextView>(R.id.tvTxnAmount).text =
-                String.format("%.2f %s", txn.amount, txn.currency ?: "SAR")
-            itemView.findViewById<TextView>(R.id.tvTxnDate).text = txn.createdAt ?: ""
-
-            val tvStatus = itemView.findViewById<TextView>(R.id.tvTxnStatus)
-            tvStatus.text = if (txn.synced) getString(R.string.result_status_synced) else getString(R.string.result_status_offline)
-
-            val statusIcon = itemView.findViewById<ImageView>(R.id.ivTxnIcon)
-            statusIcon.setColorFilter(
-                ContextCompat.getColor(this, if (txn.synced) R.color.success_color else R.color.text_secondary)
-            )
+            
+            itemView.findViewById<TextView>(R.id.tvTxnAmount)?.text = "${transaction.amount} ${transaction.currency ?: "ر.س"}"
+            itemView.findViewById<TextView>(R.id.tvTxnDate)?.text = transaction.createdAt ?: "بدون تاريخ"
+            itemView.findViewById<TextView>(R.id.tvTxnStatus)?.text = if (transaction.type == "debit") "دفع" else "شحن"
+            
             container.addView(itemView)
         }
     }
 
-    // ⭐ التعديل الأهم: دالة جلب التوكنز الحقيقية من السيرفر باستخدام الـ SDK
-    private fun provisionOfflineTokens() {
+    /**
+     * جلب مفاتيح الدفع من السيرفر.
+     * @param showFeedback إذا كان true، سيظهر Toast في حالة الفشل أو النجاح (يستخدم عند ضغط المستخدم على زر الدفع)
+     */
+    private fun provisionOfflineTokens(showFeedback: Boolean) {
         lifecycleScope.launch {
             try {
-                // جلب رمز المصادقة (JWT)
+                // جلب التوكن الخام فقط
                 val token = tokenManager.getAccessToken() ?: return@launch
-                val authHeader = if (token.startsWith("Bearer ")) token else "Bearer $token"
 
-                // استدعاء دالة الـ SDK التي تتصل بالشبكة، تفك الـ JSON، وتخزن المفاتيح محلياً
-                val result = AtheerSdk.getInstance().fetchAndProvisionTokens(authHeader)
+                android.util.Log.d("AtheerSDK", "🔄 جاري محاولة جلب المفاتيح من السيرفر...")
+
+                // التعديل هنا: تمرير التوكن مباشرة (token) بدلاً من (authHeader)
+                val result = AtheerSdk.getInstance().fetchAndProvisionTokens(token)
 
                 result.onSuccess { count ->
-                    android.util.Log.d("AtheerSDK", "✅ تم جلب وتجهيز $count مفتاح دفع مشفر من السيرفر بنجاح")
+                    android.util.Log.d("AtheerSDK", "✅ تم جلب وتخزين $count مفتاح دفع بنجاح")
+                    if (showFeedback) {
+                        Toast.makeText(this@CustomerMainActivity, "تم تجهيز مفاتيح الدفع بنجاح ($count)", Toast.LENGTH_SHORT).show()
+                    }
                 }.onFailure { error ->
-                    android.util.Log.e("AtheerSDK", "❌ فشل تجهيز مفاتيح الدفع: ${error.message}")
+                    val errorMsg = error.message ?: "خطأ غير معروف"
+                    android.util.Log.e("AtheerSDK", "❌ فشل التجهيز: $errorMsg")
+
+                    if (showFeedback) {
+                        val userMsg = if (errorMsg.contains("شبكة") || errorMsg.contains("network") || errorMsg.contains("الوقت المحدد")) {
+                            "فشل الاتصال: تأكد من جودة الإنترنت أو البيانات الخلوية وحاول مجدداً"
+                        } else {
+                            "فشل تجهيز المفاتيح: $errorMsg"
+                        }
+                        Toast.makeText(this@CustomerMainActivity, userMsg, Toast.LENGTH_LONG).show()
+                    }
                 }
             } catch (e: Exception) {
-                android.util.Log.e("AtheerSDK", "❌ خطأ غير متوقع أثناء تجهيز المفاتيح: ${e.message}")
+                android.util.Log.e("AtheerSDK", "❌ خطأ غير متوقع: ${e.message}")
             }
         }
     }
 
     private fun setupAtheerPayButton() {
         binding.btnAtheerPay.setOnClickListener {
-            authenticateWithBiometric()
+            val remainingTokens = AtheerSdk.getInstance().getRemainingTokensCount()
+            if (remainingTokens > 0) {
+                authenticateWithBiometric()
+            } else {
+                Toast.makeText(this, "جاري محاولة جلب مفاتيح الدفع من السيرفر، يرجى الانتظار...", Toast.LENGTH_SHORT).show()
+                provisionOfflineTokens(showFeedback = true) // هنا نطلب إظهار الخطأ إذا فشل
+            }
         }
     }
 
@@ -228,16 +241,15 @@ class CustomerMainActivity : AppCompatActivity() {
     }
 
     private fun showNfcBottomSheet() {
-        val dialog = BottomSheetDialog(this)
-        val view = LayoutInflater.from(this).inflate(R.layout.bottom_sheet_nfc, null)
-        dialog.setContentView(view)
-
-        // التحقق من وجود توكنز جاهزة قبل عرض النافذة
         val remainingTokens = AtheerSdk.getInstance().getRemainingTokensCount()
         if (remainingTokens > 0) {
+            val dialog = BottomSheetDialog(this)
+            val view = LayoutInflater.from(this).inflate(R.layout.bottom_sheet_nfc, null)
+            dialog.setContentView(view)
             dialog.show()
         } else {
-            Toast.makeText(this, "يرجى تحديث الرصيد أولاً لتجهيز مفاتيح الدفع (جاري جلبها من السيرفر...)", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, "لا توجد مفاتيح جاهزة. جاري محاولة الجلب...", Toast.LENGTH_LONG).show()
+            provisionOfflineTokens(showFeedback = true)
         }
     }
 }

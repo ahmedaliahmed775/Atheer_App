@@ -218,6 +218,7 @@ class MerchantMainActivity : AppCompatActivity() {
     private fun processCharge(amount: Long, token: String, merchantId: String) {
         lifecycleScope.launch {
             try {
+                // جلب التوكن الخام دون إضافات
                 val accessToken = tokenManager.getAccessToken() ?: ""
                 val chargeRequest = ChargeRequest(
                     amount = amount,
@@ -226,7 +227,8 @@ class MerchantMainActivity : AppCompatActivity() {
                     atheerToken = token
                 )
 
-                val result = AtheerSdk.getInstance().charge(chargeRequest, "Bearer $accessToken")
+                // التعديل هنا: تمرير accessToken مباشرة بدون كلمة "Bearer" لأن المكتبة تتكفل بإضافتها
+                val result = AtheerSdk.getInstance().charge(chargeRequest, accessToken)
 
                 result.onSuccess {
                     paymentDialog?.dismiss()
