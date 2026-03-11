@@ -1,12 +1,17 @@
 package com.atheer.demo.ui.pos
 
+import android.content.Context
 import android.content.Intent
 import android.nfc.NfcAdapter
+import android.os.Build
 import android.os.Bundle
+import android.os.VibrationEffect
+import android.os.Vibrator
 import android.provider.Settings
 import android.view.View
 import android.view.animation.AlphaAnimation
 import android.view.animation.Animation
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.atheer.demo.R
@@ -21,11 +26,6 @@ import kotlinx.coroutines.launch
 
 /**
  * PosActivity — مسار نقطة المبيعات (SoftPOS)
- *
- * يحول الهاتف إلى جهاز نقطة بيع:
- * - يقرأ بطاقات NFC وهواتف تعمل بوضع HCE
- * - يستقبل بيانات الدفع المشفرة عبر Atheer SDK
- * - يعرض نتيجة المعاملة في شاشة مستقلة
  */
 class PosActivity : AppCompatActivity() {
 
@@ -33,7 +33,7 @@ class PosActivity : AppCompatActivity() {
     private lateinit var tokenManager: TokenManager
     private var merchantId: String = DEFAULT_MERCHANT_ID
     private var accessToken: String = ""
-    private var amountInput: Long = 0L // تم التحويل إلى Long
+    private var amountInput: Long = 0L
     private var nfcAdapter: NfcAdapter? = null
     private var nfcReader: AtheerNfcReader? = null
     private var isReading = false
@@ -47,13 +47,11 @@ class PosActivity : AppCompatActivity() {
         merchantId = intent.getStringExtra(EXTRA_MERCHANT_ID) ?: DEFAULT_MERCHANT_ID
         accessToken = intent.getStringExtra(EXTRA_ACCESS_TOKEN) ?: (tokenManager.getAccessToken() ?: "")
 
-        // جلب المبلغ كـ Long بشكل آمن
         val doubleAmount = intent.getDoubleExtra(EXTRA_AMOUNT, 0.0)
         amountInput = if (doubleAmount > 0) Math.round(doubleAmount * 100)
         else intent.getLongExtra(EXTRA_AMOUNT, 0L)
 
         nfcAdapter = NfcAdapter.getDefaultAdapter(this)
-
         checkNfcAvailability()
 
         binding.btnBack.setOnClickListener { finish() }
@@ -64,7 +62,6 @@ class PosActivity : AppCompatActivity() {
         }
     }
 
-    /** التحقق من توفر NFC وتفعيله */
     private fun checkNfcAvailability() {
         when {
             nfcAdapter == null -> {
@@ -85,10 +82,8 @@ class PosActivity : AppCompatActivity() {
         }
     }
 
-    /** بدء قراءة NFC */
     private fun startNfcReading() {
         if (isReading) return
-
         val adapter = nfcAdapter ?: return
         if (!adapter.isEnabled) {
             checkNfcAvailability()
@@ -113,20 +108,13 @@ class PosActivity : AppCompatActivity() {
             }
         )
 
-        adapter.enableReaderMode(
-            this,
-            nfcReader,
-            NfcAdapter.FLAG_READER_NFC_A or
-                    NfcAdapter.FLAG_READER_NFC_B or
-                    NfcAdapter.FLAG_READER_SKIP_NDEF_CHECK,
-            null
-        )
+        adapter.enableReaderMode(this, nfcReader,
+            NfcAdapter.FLAG_READER_NFC_A or NfcAdapter.FLAG_READER_NFC_B or NfcAdapter.FLAG_READER_SKIP_NDEF_CHECK, null)
 
         isReading = true
         updateReadingUi(true)
     }
 
-    /** إيقاف قراءة NFC */
     private fun stopNfcReading() {
         if (!isReading) return
         nfcAdapter?.disableReaderMode(this)
@@ -160,6 +148,57 @@ class PosActivity : AppCompatActivity() {
         }
     }
 
+    /** معالجة الدفع عبر SDK */
+    private fun processChargeWithSdk(capturedAtheerToken: String, transaction: AtheerTransaction) {
+        // 🌟 تفعيل الاهتزاز عند التقاط البطاقة
+        val vibrator = getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            vibrator.vibrate(VibrationEffect.createOneShot(100, VibrationEffect.DEFAULT_AMPLITUDE))
+        } else {
+            @Suppress("DEPRECATION")
+            vibrator.vibrate(100)
+        }
+
+        // 🌟 إظهار رسالة توضيحية للتاجر
+        Toast.makeText(this, "تم التقاط البطاقة.. جاري المعالجة", Toast.LENGTH_SHORT).show()
+
+        val transactionAmount = Math.round(transaction.amount.toDouble() * 100)
+        val finalAmount = if (amountInput > 0L) amountInput else transactionAmount
+
+        val chargeRequest = ChargeRequest(
+            amount = finalAmount,
+            currency = "YER",
+            merchantId = DEFAULT_MERCHANT_ID,
+            atheerToken = capturedAtheerToken
+        )
+
+        lifecycleScope.launch {
+            try {
+                val result = AtheerSdk.getInstance().charge(chargeRequest, "Bearer $accessToken")
+
+                result.onSuccess { response ->
+                    val intent = Intent(this@PosActivity, TransactionResultActivity::class.java).apply {
+                        putExtra(TransactionResultActivity.EXTRA_TRANSACTION_ID, response.transactionId)
+                        putExtra(TransactionResultActivity.EXTRA_AMOUNT, finalAmount / 100.0)
+                        putExtra(TransactionResultActivity.EXTRA_CURRENCY, "YER")
+                        putExtra(TransactionResultActivity.EXTRA_MERCHANT_ID, DEFAULT_MERCHANT_ID)
+                        putExtra(TransactionResultActivity.EXTRA_TIMESTAMP, transaction.timestamp)
+                        putExtra(TransactionResultActivity.EXTRA_IS_SUCCESS, true)
+                        putExtra(TransactionResultActivity.EXTRA_IS_SYNCED, true)
+                    }
+                    startActivity(intent)
+                    finish()
+                }.onFailure { error ->
+                    binding.tvPosStatus.text = "خطأ: ${error.message}"
+                    binding.progressReading.visibility = View.GONE
+                }
+            } catch (e: Exception) {
+                binding.tvPosStatus.text = "خطأ: ${e.message}"
+                binding.progressReading.visibility = View.GONE
+            }
+        }
+    }
+
     override fun onResume() {
         super.onResume()
         checkNfcAvailability()
@@ -175,45 +214,5 @@ class PosActivity : AppCompatActivity() {
         const val EXTRA_ACCESS_TOKEN = "extra_access_token"
         const val EXTRA_AMOUNT = "extra_amount"
         const val DEFAULT_MERCHANT_ID = "777000000"
-    }
-
-    /** معالجة الدفع عبر SDK */
-    private fun processChargeWithSdk(capturedAtheerToken: String, transaction: AtheerTransaction) {
-        val transactionAmount = Math.round(transaction.amount.toDouble() * 100)
-        val finalAmount = if (amountInput > 0L) amountInput else transactionAmount
-
-        val chargeRequest = ChargeRequest(
-            amount = finalAmount,
-            currency = "YER",
-            merchantId = DEFAULT_MERCHANT_ID,
-            atheerToken = capturedAtheerToken
-        )
-
-        val token = accessToken
-        lifecycleScope.launch {
-            try {
-                val result = AtheerSdk.getInstance().charge(chargeRequest, "Bearer $token")
-
-                result.onSuccess { response ->
-                    val intent = Intent(this@PosActivity, TransactionResultActivity::class.java).apply {
-                        putExtra(TransactionResultActivity.EXTRA_TRANSACTION_ID, response.transactionId)
-                        putExtra(TransactionResultActivity.EXTRA_AMOUNT, finalAmount / 100.0)
-                        putExtra(TransactionResultActivity.EXTRA_CURRENCY, "YER")
-                        putExtra(TransactionResultActivity.EXTRA_MERCHANT_ID, DEFAULT_MERCHANT_ID)
-                        putExtra(TransactionResultActivity.EXTRA_TIMESTAMP, transaction.timestamp)
-                        putExtra(TransactionResultActivity.EXTRA_IS_SUCCESS, true)
-                        putExtra(TransactionResultActivity.EXTRA_IS_SYNCED, true)
-                    }
-                    startActivity(intent)
-                    finish() // إغلاق شاشة الـ POS بعد النجاح
-                }.onFailure { error ->
-                    binding.tvPosStatus.text = "خطأ: ${error.message}"
-                    binding.progressReading.visibility = View.GONE
-                }
-            } catch (e: Exception) {
-                binding.tvPosStatus.text = "خطأ: ${e.message}"
-                binding.progressReading.visibility = View.GONE
-            }
-        }
     }
 }

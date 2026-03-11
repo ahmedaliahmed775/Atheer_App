@@ -175,7 +175,8 @@ class CustomerMainActivity : AppCompatActivity() {
                 android.util.Log.d("AtheerSDK", "🔄 جاري محاولة جلب المفاتيح من السيرفر...")
 
                 // التعديل هنا: تمرير التوكن مباشرة (token) بدلاً من (authHeader)
-                val result = AtheerSdk.getInstance().fetchAndProvisionTokens(token)
+                // التعديل: إضافة قيم افتراضية (مثلاً 5 توكنات بسقف 5000 ريال)
+                val result = AtheerSdk.getInstance().fetchAndProvisionTokens(token, 5, 5000L)
 
                 result.onSuccess { count ->
                     android.util.Log.d("AtheerSDK", "✅ تم جلب وتخزين $count مفتاح دفع بنجاح")

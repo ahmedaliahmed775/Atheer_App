@@ -28,6 +28,7 @@ import com.atheer.sdk.model.ChargeRequest
 import com.atheer.sdk.nfc.AtheerNfcReader
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import kotlinx.coroutines.launch
+import android.util.Log
 
 class MerchantMainActivity : AppCompatActivity() {
 
@@ -305,6 +306,24 @@ class MerchantMainActivity : AppCompatActivity() {
                 Toast.makeText(this@MerchantMainActivity, "تمت المزامنة", Toast.LENGTH_SHORT).show()
             } finally {
                 binding.btnSyncNow.isEnabled = true
+            }
+        }
+    }
+    // أضف هذه الدالة داخل الكلاس
+    private fun fetchBalance() {
+        lifecycleScope.launch {
+            try {
+                val token = tokenManager.getAccessToken() ?: ""
+                // التعديل: استخدام apiService بدلاً من instance
+                val response = RetrofitClient.apiService.getBalance("Bearer $token")
+
+                if (response.isSuccessful && response.body()?.success == true) {
+                    val balanceData = response.body()?.data
+                    // التعديل: استخدام binding للوصول للمعرف tvMerchantBalance
+                    binding.tvMerchantBalance.text = "${balanceData?.balance ?: 0.0} ريال"
+                }
+            } catch (e: Exception) {
+                Log.e("MerchantMain", "فشل جلب الرصيد: ${e.message}")
             }
         }
     }
