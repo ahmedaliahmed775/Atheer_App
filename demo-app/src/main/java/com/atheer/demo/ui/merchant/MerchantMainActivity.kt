@@ -10,11 +10,13 @@ import android.os.Vibrator
 import android.os.VibratorManager
 import android.view.LayoutInflater
 import android.view.View
-import android.widget.Button
+import android.view.animation.AlphaAnimation
+import android.view.animation.Animation
+import android.view.animation.AnimationSet
+import android.view.animation.ScaleAnimation
 import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
-import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
@@ -23,10 +25,10 @@ import com.atheer.demo.data.local.TokenManager
 import com.atheer.demo.data.network.RetrofitClient
 import com.atheer.demo.databinding.ActivityMerchantMainBinding
 import com.atheer.demo.ui.login.LoginActivity
+import com.atheer.demo.ui.result.TransactionResultActivity
 import com.atheer.sdk.AtheerSdk
 import com.atheer.sdk.model.ChargeRequest
 import com.atheer.sdk.nfc.AtheerNfcReader
-import com.google.android.material.bottomsheet.BottomSheetDialog
 import kotlinx.coroutines.launch
 import android.util.Log
 
@@ -37,7 +39,6 @@ class MerchantMainActivity : AppCompatActivity() {
     private var nfcAdapter: NfcAdapter? = null
     private var nfcReader: AtheerNfcReader? = null
     private var enteredAmount: StringBuilder = StringBuilder()
-    private var paymentDialog: BottomSheetDialog? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -50,6 +51,15 @@ class MerchantMainActivity : AppCompatActivity() {
         setupBottomNavigation()
         setupNumericKeypad()
         setupReceivePayment()
+
+        // 🌟 جلب الرصيد فور فتح التطبيق
+        fetchBalance()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // 🌟 تحديث الرصيد تلقائياً عند العودة من شاشة الدفع
+        fetchBalance()
     }
 
     private fun setupBottomNavigation() {
@@ -59,6 +69,7 @@ class MerchantMainActivity : AppCompatActivity() {
                     binding.layoutHome.visibility = View.VISIBLE
                     binding.layoutHistory.visibility = View.GONE
                     binding.layoutSettings.visibility = View.GONE
+                    fetchBalance()
                     true
                 }
                 R.id.nav_history -> {
@@ -124,7 +135,6 @@ class MerchantMainActivity : AppCompatActivity() {
     }
 
     private fun setupReceivePayment() {
-        // هذا هو الزر الرئيسي لاستقبال الدفع
         binding.btnReceivePayment.setOnClickListener {
             val amountDouble = enteredAmount.toString().toDoubleOrNull()
             val amountLong = amountDouble?.let { Math.round(it * 100) }
@@ -134,202 +144,155 @@ class MerchantMainActivity : AppCompatActivity() {
                 return@setOnClickListener
             }
 
-            // إظهار الواجهة الاحترافية فوراً
-            showProfessionalPaymentSheet(amountLong)
+            // 🌟 تشغيل الرادار في نفس الواجهة
+            startIntegratedNfcReading(amountLong)
         }
-    }
 
-    private fun showProfessionalPaymentSheet(amount: Long) {
-        paymentDialog = BottomSheetDialog(this, R.style.BottomSheetDialogTheme)
-        val view = layoutInflater.inflate(R.layout.layout_receive_payment, null)
-        paymentDialog?.setContentView(view)
-        paymentDialog?.setCancelable(false)
-
-        val tvStatus = view.findViewById<TextView>(R.id.tvPaymentStatus) ?: view.findViewById(android.R.id.text1)
-        val btnCancel = view.findViewById<Button>(R.id.btnCancel)
-
-        btnCancel.setOnClickListener {
+        // زر الإلغاء في الرادار
+        binding.btnCancelReading.setOnClickListener {
             stopNfcReading()
-            paymentDialog?.dismiss()
+            showFullscreenOverlay(false)
         }
-
-        // بدء القراءة تلقائياً عند ظهور الواجهة
-        startNfcReading(amount, tvStatus)
-
-        paymentDialog?.show()
     }
 
-    private fun startNfcReading(amount: Long, statusTextView: TextView?) {
+    private fun startIntegratedNfcReading(amount: Long) {
         val adapter = nfcAdapter
         if (adapter == null || !adapter.isEnabled) {
-            statusTextView?.text = getString(R.string.pos_nfc_unavailable)
+            Toast.makeText(this, "يرجى تفعيل الـ NFC", Toast.LENGTH_SHORT).show()
             return
         }
 
-        statusTextView?.text = "جاري البحث عن بطاقة..."
-
-        val merchantId = tokenManager.getUserPhone() ?: "MERCHANT"
+        showFullscreenOverlay(true)
+        val merchantId = tokenManager.getUserPhone() ?: "777000000"
 
         nfcReader = AtheerNfcReader(
             merchantId = merchantId,
             transactionCallback = { transaction ->
-                triggerHapticFeedback()
                 runOnUiThread {
-                    statusTextView?.text = "تم التقاط البطاقة.. جاري المعالجة"
-                    val token = transaction.tokenizedCard
-                    if (token != null) {
-                        processCharge(amount, token, merchantId)
-                    } else {
-                        statusTextView?.text = "فشل في قراءة التوكن"
-                    }
+                    adapter.disableReaderMode(this)
+                    triggerHapticFeedback()
+                    binding.tvFullscreenStatus.text = "جاري المعالجة..."
+                    processCharge(amount, transaction.tokenizedCard ?: "", merchantId)
                 }
             },
             errorCallback = { error ->
                 runOnUiThread {
-                    statusTextView?.text = "خطأ: ${error.message}"
+                    stopNfcReading()
+                    showFullscreenOverlay(false)
+                    Toast.makeText(this, "خطأ: ${error.message}", Toast.LENGTH_LONG).show()
                 }
             }
         )
 
-        adapter.enableReaderMode(
-            this,
-            nfcReader,
-            NfcAdapter.FLAG_READER_NFC_A or
-                    NfcAdapter.FLAG_READER_NFC_B or
-                    NfcAdapter.FLAG_READER_SKIP_NDEF_CHECK,
-            null
-        )
+        adapter.enableReaderMode(this, nfcReader, NfcAdapter.FLAG_READER_NFC_A or NfcAdapter.FLAG_READER_NFC_B, null)
     }
 
-    private fun stopNfcReading() {
-        nfcAdapter?.disableReaderMode(this)
-    }
+    private fun showFullscreenOverlay(show: Boolean) {
+        if (show) {
+            binding.layoutFullscreenReading.visibility = View.VISIBLE
+            binding.layoutFullscreenReading.alpha = 0f
+            binding.layoutFullscreenReading.animate().alpha(1f).setDuration(300).start()
 
-    private fun triggerHapticFeedback() {
-        val vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            val vibratorManager = getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager
-            vibratorManager.defaultVibrator
+            val scaleAnim = ScaleAnimation(1f, 4.5f, 1f, 4.5f, Animation.RELATIVE_TO_SELF, 0.5f, Animation.RELATIVE_TO_SELF, 0.5f).apply {
+                duration = 1500
+                repeatCount = Animation.INFINITE
+            }
+            val alphaAnim = AlphaAnimation(0.8f, 0f).apply { duration = 1500; repeatCount = Animation.INFINITE }
+            val set = AnimationSet(true).apply { addAnimation(scaleAnim); addAnimation(alphaAnim) }
+
+            binding.pulseRipple1.startAnimation(set)
+            binding.pulseRipple2.postDelayed({
+                binding.pulseRipple2.visibility = View.VISIBLE
+                binding.pulseRipple2.startAnimation(set)
+            }, 750)
         } else {
-            @Suppress("DEPRECATION")
-            getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+            binding.pulseRipple1.clearAnimation()
+            binding.pulseRipple2.clearAnimation()
+            binding.layoutFullscreenReading.animate().alpha(0f).setDuration(200).withEndAction {
+                binding.layoutFullscreenReading.visibility = View.GONE
+            }.start()
         }
-        vibrator.vibrate(VibrationEffect.createOneShot(300, VibrationEffect.DEFAULT_AMPLITUDE))
     }
 
     private fun processCharge(amount: Long, token: String, merchantId: String) {
         lifecycleScope.launch {
             try {
-                // جلب التوكن الخام دون إضافات
                 val accessToken = tokenManager.getAccessToken() ?: ""
-                val chargeRequest = ChargeRequest(
-                    amount = amount,
-                    currency = "YER",
-                    merchantId = merchantId,
-                    atheerToken = token
-                )
+                val chargeRequest = ChargeRequest(amount, "YER", merchantId, token)
 
-                // التعديل هنا: تمرير accessToken مباشرة بدون كلمة "Bearer" لأن المكتبة تتكفل بإضافتها
                 val result = AtheerSdk.getInstance().charge(chargeRequest, accessToken)
 
-                result.onSuccess {
-                    paymentDialog?.dismiss()
-                    stopNfcReading()
-                    showSuccessDialog()
+                result.onSuccess { response ->
+                    showFullscreenOverlay(false)
+                    val intent = Intent(this@MerchantMainActivity, TransactionResultActivity::class.java).apply {
+                        putExtra(TransactionResultActivity.EXTRA_IS_SUCCESS, true)
+                        putExtra(TransactionResultActivity.EXTRA_TRANSACTION_ID, response.transactionId)
+                        putExtra(TransactionResultActivity.EXTRA_AMOUNT, amount.toDouble() / 100.0)
+                        putExtra(TransactionResultActivity.EXTRA_CURRENCY, "YER")
+                        putExtra(TransactionResultActivity.EXTRA_MERCHANT_ID, merchantId)
+                        putExtra(TransactionResultActivity.EXTRA_TIMESTAMP, System.currentTimeMillis())
+                    }
+                    startActivity(intent)
                     enteredAmount.clear()
                     updateAmountDisplay()
-                }.onFailure {
-                    Toast.makeText(this@MerchantMainActivity, "فشلت عملية الخصم", Toast.LENGTH_LONG).show()
+                }.onFailure { error ->
+                    showFullscreenOverlay(false)
+                    val intent = Intent(this@MerchantMainActivity, TransactionResultActivity::class.java).apply {
+                        putExtra(TransactionResultActivity.EXTRA_IS_SUCCESS, false)
+                        putExtra("error_message", error.message)
+                    }
+                    startActivity(intent)
                 }
             } catch (e: Exception) {
+                showFullscreenOverlay(false)
                 Toast.makeText(this@MerchantMainActivity, "خطأ في الاتصال", Toast.LENGTH_SHORT).show()
             }
         }
     }
 
-    private fun showSuccessDialog() {
-        AlertDialog.Builder(this)
-            .setTitle("تمت العملية بنجاح")
-            .setMessage("تم استلام المبلغ ومزامنة العملية مع السيرفر.")
-            .setPositiveButton("موافق", null)
-            .show()
-    }
-
-    private fun loadHistory() {
-        val context = this
-        lifecycleScope.launch {
-            try {
-                val token = tokenManager.getAccessToken() ?: ""
-                val response = RetrofitClient.apiService.getHistory("Bearer $token")
-
-                if (response.isSuccessful && response.body()?.data?.transactions != null) {
-                    displayTransactions(response.body()!!.data!!.transactions!!)
-                } else {
-                    binding.tvHistoryEmpty.visibility = View.VISIBLE
-                    binding.rvHistory.visibility = View.GONE
-                }
-            } catch (e: Exception) {
-                binding.tvHistoryEmpty.text = getString(R.string.error_offline)
-                binding.tvHistoryEmpty.visibility = View.VISIBLE
-            }
-        }
-    }
-
-    private fun displayTransactions(transactions: List<com.atheer.demo.data.model.TransactionItem>) {
-        val container = binding.rvHistory
-        container.removeAllViews()
-
-        if (transactions.isEmpty()) {
-            binding.tvHistoryEmpty.visibility = View.VISIBLE
-            return
-        }
-
-        binding.tvHistoryEmpty.visibility = View.GONE
-        for (txn in transactions) {
-            val itemView = LayoutInflater.from(this).inflate(R.layout.item_transaction, container, false)
-            itemView.findViewById<TextView>(R.id.tvTxnAmount).text =
-                String.format("%s %s", txn.amount.toString(), txn.currency ?: "YER")
-            itemView.findViewById<TextView>(R.id.tvTxnDate).text = txn.createdAt ?: ""
-
-            val statusIcon = itemView.findViewById<ImageView>(R.id.ivTxnIcon)
-            statusIcon.setColorFilter(ContextCompat.getColor(this,
-                if (txn.synced) R.color.success_color else R.color.text_secondary))
-
-            container.addView(itemView)
-        }
-    }
-
-    private fun syncTransactions() {
-        binding.btnSyncNow.isEnabled = false
-        lifecycleScope.launch {
-            try {
-                loadHistory()
-                Toast.makeText(this@MerchantMainActivity, "تمت المزامنة", Toast.LENGTH_SHORT).show()
-            } finally {
-                binding.btnSyncNow.isEnabled = true
-            }
-        }
-    }
-    // أضف هذه الدالة داخل الكلاس
     private fun fetchBalance() {
         lifecycleScope.launch {
             try {
                 val token = tokenManager.getAccessToken() ?: ""
-                // التعديل: استخدام apiService بدلاً من instance
                 val response = RetrofitClient.apiService.getBalance("Bearer $token")
-
                 if (response.isSuccessful && response.body()?.success == true) {
-                    val balanceData = response.body()?.data
-                    // التعديل: استخدام binding للوصول للمعرف tvMerchantBalance
-                    binding.tvMerchantBalance.text = "${balanceData?.balance ?: 0.0} ريال"
+                    val balance = response.body()?.data?.balance ?: 0.0
+                    binding.tvMerchantBalance.text = "${String.format("%,.2f", balance)} ريال"
                 }
-            } catch (e: Exception) {
-                Log.e("MerchantMain", "فشل جلب الرصيد: ${e.message}")
-            }
+            } catch (e: Exception) { Log.e("Balance", e.message ?: "") }
         }
     }
 
-    override fun onPause() {
-        super.onPause()
-        stopNfcReading()
+    private fun stopNfcReading() { nfcAdapter?.disableReaderMode(this) }
+
+    private fun triggerHapticFeedback() {
+        val vibrator = getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+        vibrator.vibrate(VibrationEffect.createOneShot(100, VibrationEffect.DEFAULT_AMPLITUDE))
     }
+
+    private fun loadHistory() {
+        lifecycleScope.launch {
+            try {
+                val token = tokenManager.getAccessToken() ?: ""
+                val response = RetrofitClient.apiService.getHistory("Bearer $token")
+                if (response.isSuccessful) displayTransactions(response.body()?.data?.transactions ?: emptyList())
+            } catch (e: Exception) { }
+        }
+    }
+
+    private fun displayTransactions(transactions: List<com.atheer.demo.data.model.TransactionItem>) {
+        binding.rvHistory.removeAllViews()
+        if (transactions.isEmpty()) { binding.tvHistoryEmpty.visibility = View.VISIBLE; return }
+        binding.tvHistoryEmpty.visibility = View.GONE
+        for (txn in transactions) {
+            val itemView = LayoutInflater.from(this).inflate(R.layout.item_transaction, binding.rvHistory, false)
+            itemView.findViewById<TextView>(R.id.tvTxnAmount).text = "${txn.amount} YER"
+            itemView.findViewById<TextView>(R.id.tvTxnDate).text = txn.createdAt ?: ""
+            binding.rvHistory.addView(itemView)
+        }
+    }
+
+    private fun syncTransactions() { fetchBalance(); loadHistory() }
+
+    override fun onPause() { super.onPause(); stopNfcReading() }
 }

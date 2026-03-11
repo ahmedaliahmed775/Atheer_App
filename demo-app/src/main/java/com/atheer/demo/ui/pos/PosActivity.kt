@@ -12,6 +12,7 @@ import android.view.animation.AlphaAnimation
 import android.view.animation.Animation
 import android.view.animation.AnimationSet
 import android.view.animation.ScaleAnimation
+import android.view.inputmethod.InputMethodManager
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
@@ -44,8 +45,14 @@ class PosActivity : AppCompatActivity() {
         merchantId = intent.getStringExtra(EXTRA_MERCHANT_ID) ?: DEFAULT_MERCHANT_ID
         accessToken = intent.getStringExtra(EXTRA_ACCESS_TOKEN) ?: (tokenManager.getAccessToken() ?: "")
 
-        val doubleAmount = intent.getDoubleExtra(EXTRA_AMOUNT, 0.0)
-        amountInput = if (doubleAmount > 0) Math.round(doubleAmount * 100) else intent.getLongExtra(EXTRA_AMOUNT, 0L)
+        // 🌟 إصلاح ذكي لجلب المبلغ بأمان تام
+        val extraValue = intent.extras?.get(EXTRA_AMOUNT)
+        amountInput = when(extraValue) {
+            is Long -> extraValue
+            is Double -> Math.round(extraValue * 100)
+            is Int -> extraValue.toLong()
+            else -> 0L
+        }
 
         if (amountInput > 0) {
             binding.etPosAmount.setText((amountInput / 100.0).toString())
@@ -55,8 +62,12 @@ class PosActivity : AppCompatActivity() {
 
         binding.btnBack.setOnClickListener { finish() }
 
-        // 🌟 زر استلام المبلغ (يشغل الرادار)
-        binding.btnStartReading.setOnClickListener {
+        // 🌟 زر استلام المبلغ
+        binding.btnStartReading.setOnClickListener { view ->
+            // 🌟 إخفاء الكيبورد فوراً لمنع حجب إشارة الـ NFC
+            val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+            imm.hideSoftInputFromWindow(view.windowToken, 0)
+
             val inputStr = binding.etPosAmount.text.toString()
             if (inputStr.isNotEmpty()) {
                 amountInput = Math.round((inputStr.toDoubleOrNull() ?: 0.0) * 100)
@@ -99,19 +110,16 @@ class PosActivity : AppCompatActivity() {
         adapter.enableReaderMode(this, nfcReader, NfcAdapter.FLAG_READER_NFC_A or NfcAdapter.FLAG_READER_NFC_B or NfcAdapter.FLAG_READER_SKIP_NDEF_CHECK, null)
 
         isReading = true
-        showFullscreenOverlay(true) // 🌟 هنا يتم إظهار الرادار الغامر!
+        showFullscreenOverlay(true)
     }
 
     private fun stopNfcReading() {
         if (!isReading) return
         nfcAdapter?.disableReaderMode(this)
         isReading = false
-        showFullscreenOverlay(false) // 🌟 هنا يتم إخفاء الرادار
+        showFullscreenOverlay(false)
     }
 
-    // ==============================================================
-    // 🌟 دالة التحكم في الشاشة الغامرة وتأثير الرادار (Immersive UI)
-    // ==============================================================
     private fun showFullscreenOverlay(show: Boolean) {
         if (show) {
             binding.layoutFullscreenReading.alpha = 0f
@@ -166,7 +174,8 @@ class PosActivity : AppCompatActivity() {
 
         lifecycleScope.launch {
             try {
-                val result = AtheerSdk.getInstance().charge(chargeRequest, "Bearer $accessToken")
+                // 🌟 التوكن يرسل الآن صافياً ونظيفاً بدون كلمة Bearer المكررة
+                val result = AtheerSdk.getInstance().charge(chargeRequest, accessToken)
 
                 result.onSuccess { response ->
                     navigateToResult(true, response.transactionId, finalAmount, null, null, transaction.timestamp)

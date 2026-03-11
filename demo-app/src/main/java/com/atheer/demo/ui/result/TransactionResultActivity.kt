@@ -147,15 +147,17 @@ class TransactionResultActivity : AppCompatActivity() {
     }
 
     private fun setupButtons() {
+        // زر عملية جديدة يعود للخلف (ليجد نفسه في صفحة التاجر)
         binding.btnNewTransaction.setOnClickListener {
             finish()
         }
 
+        // 🌟 زر العودة للرئيسية يعود لصفحة التاجر حصراً
         binding.btnBackDashboard.setOnClickListener {
-            val dashboardIntent = Intent(this, DashboardActivity::class.java).apply {
+            val merchantIntent = Intent(this, com.atheer.demo.ui.merchant.MerchantMainActivity::class.java).apply {
                 flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
             }
-            startActivity(dashboardIntent)
+            startActivity(merchantIntent)
             finish()
         }
 
