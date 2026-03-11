@@ -1,8 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!--
-    activity_transaction_result.xml
-    شاشة نتيجة المعاملة (نجاح أو فشل)
--->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
@@ -11,7 +7,6 @@
     android:layoutDirection="rtl"
     android:orientation="vertical">
 
-    <!-- شريط أعلى الصفحة -->
     <LinearLayout
         android:id="@+id/headerBar"
         android:layout_width="match_parent"
@@ -46,7 +41,6 @@
             android:orientation="vertical"
             android:padding="24dp">
 
-            <!-- أيقونة الحالة -->
             <FrameLayout
                 android:id="@+id/iconContainer"
                 android:layout_width="120dp"
@@ -65,7 +59,6 @@
 
             </FrameLayout>
 
-            <!-- عنوان النتيجة -->
             <TextView
                 android:id="@+id/tvResultTitle"
                 android:layout_width="wrap_content"
@@ -76,7 +69,6 @@
                 android:textStyle="bold"
                 android:layout_marginBottom="24dp" />
 
-            <!-- تفاصيل المعاملة -->
             <androidx.cardview.widget.CardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -99,7 +91,6 @@
                         android:textStyle="bold"
                         android:layout_marginBottom="16dp" />
 
-                    <!-- رقم المعاملة -->
                     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
                         android:orientation="horizontal" android:layout_marginBottom="12dp">
                         <TextView android:layout_width="0dp" android:layout_height="wrap_content"
@@ -112,9 +103,8 @@
                     </LinearLayout>
 
                     <View android:layout_width="match_parent" android:layout_height="1dp"
-                        android:background="@color/divider" android:layout_marginBottom="12dp" />
+                        android:background="#E0E0E0" android:layout_marginBottom="12dp" />
 
-                    <!-- المبلغ -->
                     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
                         android:orientation="horizontal" android:layout_marginBottom="12dp">
                         <TextView android:layout_width="0dp" android:layout_height="wrap_content"
@@ -126,7 +116,6 @@
                             android:textStyle="bold" />
                     </LinearLayout>
 
-                    <!-- العملة -->
                     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
                         android:orientation="horizontal" android:layout_marginBottom="12dp">
                         <TextView android:layout_width="0dp" android:layout_height="wrap_content"
@@ -137,7 +126,6 @@
                             android:textColor="@color/text_primary" android:textSize="13sp" />
                     </LinearLayout>
 
-                    <!-- رقم التاجر -->
                     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
                         android:orientation="horizontal" android:layout_marginBottom="12dp">
                         <TextView android:layout_width="0dp" android:layout_height="wrap_content"
@@ -148,7 +136,6 @@
                             android:textColor="@color/text_primary" android:textSize="13sp" />
                     </LinearLayout>
 
-                    <!-- وقت المعاملة -->
                     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
                         android:orientation="horizontal" android:layout_marginBottom="12dp">
                         <TextView android:layout_width="0dp" android:layout_height="wrap_content"
@@ -159,7 +146,6 @@
                             android:textColor="@color/text_primary" android:textSize="13sp" />
                     </LinearLayout>
 
-                    <!-- حالة المزامنة -->
                     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
                         android:orientation="horizontal">
                         <TextView android:layout_width="0dp" android:layout_height="wrap_content"
@@ -179,35 +165,55 @@
 
     </ScrollView>
 
-    <!-- أزرار الإجراءات -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:background="@color/white"
-        android:elevation="8dp"
-        android:orientation="horizontal"
+        android:elevation="16dp"
+        android:orientation="vertical"
         android:padding="16dp">
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnNewTransaction"
-            style="@style/Widget.AtheerDemo.Button"
-            android:layout_width="0dp"
-            android:layout_height="52dp"
-            android:layout_weight="1"
-            android:layout_marginEnd="8dp"
-            android:text="@string/btn_new_transaction" />
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginBottom="12dp">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnNewTransaction"
+                style="@style/Widget.MaterialComponents.Button"
+                android:layout_width="0dp"
+                android:layout_height="52dp"
+                android:layout_weight="1"
+                android:layout_marginEnd="8dp"
+                android:text="@string/btn_new_transaction"
+                app:backgroundTint="@color/atheer_primary"
+                app:cornerRadius="12dp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnBackDashboard"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_width="0dp"
+                android:layout_height="52dp"
+                android:layout_weight="1"
+                android:layout_marginStart="8dp"
+                android:text="@string/btn_back_dashboard"
+                android:textColor="@color/atheer_primary"
+                app:strokeColor="@color/atheer_primary"
+                app:cornerRadius="12dp" />
+
+        </LinearLayout>
 
         <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnBackDashboard"
-            android:layout_width="0dp"
-            android:layout_height="52dp"
-            android:layout_weight="1"
-            android:layout_marginStart="8dp"
-            android:text="@string/btn_back_dashboard"
+            android:id="@+id/btnShareReceipt"
+            style="@style/Widget.MaterialComponents.Button.TextButton"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:text="مشاركة الإيصال عبر واتساب أو رسالة نصية"
             android:textColor="@color/atheer_primary"
-            app:backgroundTint="@color/white"
-            app:strokeColor="@color/atheer_primary"
-            app:cornerRadius="12dp" />
+            app:icon="@android:drawable/ic_menu_share"
+            app:iconTint="@color/atheer_primary"
+            app:iconGravity="textStart" />
 
     </LinearLayout>
 

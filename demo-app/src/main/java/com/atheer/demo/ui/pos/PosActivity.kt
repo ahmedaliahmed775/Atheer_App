@@ -7,14 +7,14 @@ import android.os.Build
 import android.os.Bundle
 import android.os.VibrationEffect
 import android.os.Vibrator
-import android.provider.Settings
 import android.view.View
 import android.view.animation.AlphaAnimation
 import android.view.animation.Animation
+import android.view.animation.AnimationSet
+import android.view.animation.ScaleAnimation
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
-import com.atheer.demo.R
 import com.atheer.demo.data.local.TokenManager
 import com.atheer.demo.databinding.ActivityPosBinding
 import com.atheer.demo.ui.result.TransactionResultActivity
@@ -24,9 +24,6 @@ import com.atheer.sdk.model.ChargeRequest
 import com.atheer.sdk.nfc.AtheerNfcReader
 import kotlinx.coroutines.launch
 
-/**
- * PosActivity — مسار نقطة المبيعات (SoftPOS)
- */
 class PosActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityPosBinding
@@ -48,45 +45,37 @@ class PosActivity : AppCompatActivity() {
         accessToken = intent.getStringExtra(EXTRA_ACCESS_TOKEN) ?: (tokenManager.getAccessToken() ?: "")
 
         val doubleAmount = intent.getDoubleExtra(EXTRA_AMOUNT, 0.0)
-        amountInput = if (doubleAmount > 0) Math.round(doubleAmount * 100)
-        else intent.getLongExtra(EXTRA_AMOUNT, 0L)
+        amountInput = if (doubleAmount > 0) Math.round(doubleAmount * 100) else intent.getLongExtra(EXTRA_AMOUNT, 0L)
+
+        if (amountInput > 0) {
+            binding.etPosAmount.setText((amountInput / 100.0).toString())
+        }
 
         nfcAdapter = NfcAdapter.getDefaultAdapter(this)
-        checkNfcAvailability()
 
         binding.btnBack.setOnClickListener { finish() }
-        binding.btnStartReading.setOnClickListener { startNfcReading() }
-        binding.btnStopReading.setOnClickListener { stopNfcReading() }
-        binding.btnOpenNfcSettings.setOnClickListener {
-            startActivity(Intent(Settings.ACTION_NFC_SETTINGS))
-        }
-    }
 
-    private fun checkNfcAvailability() {
-        when {
-            nfcAdapter == null -> {
-                binding.layoutNfcUnavailable.visibility = View.VISIBLE
-                binding.tvPosStatus.text = getString(R.string.pos_nfc_unavailable)
-                binding.btnStartReading.isEnabled = false
+        // 🌟 زر استلام المبلغ (يشغل الرادار)
+        binding.btnStartReading.setOnClickListener {
+            val inputStr = binding.etPosAmount.text.toString()
+            if (inputStr.isNotEmpty()) {
+                amountInput = Math.round((inputStr.toDoubleOrNull() ?: 0.0) * 100)
             }
-            !nfcAdapter!!.isEnabled -> {
-                binding.layoutNfcUnavailable.visibility = View.VISIBLE
-                binding.tvPosStatus.text = getString(R.string.pos_enable_nfc)
-                binding.btnOpenNfcSettings.visibility = View.VISIBLE
-                binding.btnStartReading.isEnabled = false
+            if(amountInput <= 0) {
+                Toast.makeText(this, "يرجى إدخال مبلغ صحيح", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
             }
-            else -> {
-                binding.layoutNfcUnavailable.visibility = View.GONE
-                binding.btnStartReading.isEnabled = true
-            }
+            startNfcReading()
         }
+
+        binding.btnStopReading.setOnClickListener { stopNfcReading() }
     }
 
     private fun startNfcReading() {
         if (isReading) return
         val adapter = nfcAdapter ?: return
         if (!adapter.isEnabled) {
-            checkNfcAvailability()
+            Toast.makeText(this, "يرجى تفعيل الـ NFC", Toast.LENGTH_SHORT).show()
             return
         }
 
@@ -94,7 +83,7 @@ class PosActivity : AppCompatActivity() {
             merchantId = merchantId,
             transactionCallback = { transaction ->
                 runOnUiThread {
-                    stopNfcReading()
+                    adapter.disableReaderMode(this) // إيقاف القراءة لتجنب التكرار
                     val capturedAtheerToken = transaction.tokenizedCard ?: transaction.transactionId ?: ""
                     processChargeWithSdk(capturedAtheerToken, transaction)
                 }
@@ -102,55 +91,64 @@ class PosActivity : AppCompatActivity() {
             errorCallback = { error ->
                 runOnUiThread {
                     stopNfcReading()
-                    binding.tvPosStatus.text = "خطأ: ${error.message}"
-                    binding.progressReading.visibility = View.GONE
+                    Toast.makeText(this, "خطأ في القراءة: ${error.message}", Toast.LENGTH_LONG).show()
                 }
             }
         )
 
-        adapter.enableReaderMode(this, nfcReader,
-            NfcAdapter.FLAG_READER_NFC_A or NfcAdapter.FLAG_READER_NFC_B or NfcAdapter.FLAG_READER_SKIP_NDEF_CHECK, null)
+        adapter.enableReaderMode(this, nfcReader, NfcAdapter.FLAG_READER_NFC_A or NfcAdapter.FLAG_READER_NFC_B or NfcAdapter.FLAG_READER_SKIP_NDEF_CHECK, null)
 
         isReading = true
-        updateReadingUi(true)
+        showFullscreenOverlay(true) // 🌟 هنا يتم إظهار الرادار الغامر!
     }
 
     private fun stopNfcReading() {
         if (!isReading) return
         nfcAdapter?.disableReaderMode(this)
         isReading = false
-        runOnUiThread { updateReadingUi(false) }
+        showFullscreenOverlay(false) // 🌟 هنا يتم إخفاء الرادار
     }
 
-    private fun updateReadingUi(reading: Boolean) {
-        if (reading) {
-            binding.tvPosStatus.text = getString(R.string.pos_reading)
-            binding.tvPosGuide.text = getString(R.string.pos_tap_card)
-            binding.progressReading.visibility = View.VISIBLE
-            binding.btnStartReading.isEnabled = false
-            binding.btnStopReading.isEnabled = true
+    // ==============================================================
+    // 🌟 دالة التحكم في الشاشة الغامرة وتأثير الرادار (Immersive UI)
+    // ==============================================================
+    private fun showFullscreenOverlay(show: Boolean) {
+        if (show) {
+            binding.layoutFullscreenReading.alpha = 0f
+            binding.layoutFullscreenReading.visibility = View.VISIBLE
+            binding.layoutFullscreenReading.animate().alpha(1f).setDuration(300).start()
+            binding.tvFullscreenStatus.text = "يرجى تقريب بطاقة أو هاتف العميل"
 
-            val blink = AlphaAnimation(0.3f, 1.0f).apply {
-                duration = 700
-                repeatMode = Animation.REVERSE
+            val scaleAnim = ScaleAnimation(1f, 4.5f, 1f, 4.5f, Animation.RELATIVE_TO_SELF, 0.5f, Animation.RELATIVE_TO_SELF, 0.5f).apply {
+                duration = 1500
                 repeatCount = Animation.INFINITE
             }
-            binding.ivPosNfcIcon.startAnimation(blink)
-            binding.ivPosNfcIcon.alpha = 1f
+            val alphaAnim = AlphaAnimation(0.8f, 0f).apply {
+                duration = 1500
+                repeatCount = Animation.INFINITE
+            }
+            val set = AnimationSet(true).apply {
+                addAnimation(scaleAnim)
+                addAnimation(alphaAnim)
+            }
+
+            binding.pulseRipple1.startAnimation(set)
+            binding.pulseRipple2.postDelayed({
+                binding.pulseRipple2.visibility = View.VISIBLE
+                binding.pulseRipple2.startAnimation(set)
+            }, 750)
+
         } else {
-            binding.tvPosStatus.text = getString(R.string.pos_waiting)
-            binding.tvPosGuide.text = ""
-            binding.progressReading.visibility = View.GONE
-            binding.btnStartReading.isEnabled = nfcAdapter?.isEnabled == true
-            binding.btnStopReading.isEnabled = false
-            binding.ivPosNfcIcon.clearAnimation()
-            binding.ivPosNfcIcon.alpha = 0.5f
+            binding.pulseRipple1.clearAnimation()
+            binding.pulseRipple2.clearAnimation()
+            binding.pulseRipple2.visibility = View.GONE
+            binding.layoutFullscreenReading.animate().alpha(0f).setDuration(200).withEndAction {
+                binding.layoutFullscreenReading.visibility = View.GONE
+            }.start()
         }
     }
 
-    /** معالجة الدفع عبر SDK */
     private fun processChargeWithSdk(capturedAtheerToken: String, transaction: AtheerTransaction) {
-        // 🌟 تفعيل الاهتزاز عند التقاط البطاقة
         val vibrator = getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             vibrator.vibrate(VibrationEffect.createOneShot(100, VibrationEffect.DEFAULT_AMPLITUDE))
@@ -159,49 +157,55 @@ class PosActivity : AppCompatActivity() {
             vibrator.vibrate(100)
         }
 
-        // 🌟 إظهار رسالة توضيحية للتاجر
-        Toast.makeText(this, "تم التقاط البطاقة.. جاري المعالجة", Toast.LENGTH_SHORT).show()
+        binding.tvFullscreenStatus.text = "جاري التحقق من السيرفر..."
 
         val transactionAmount = Math.round(transaction.amount.toDouble() * 100)
         val finalAmount = if (amountInput > 0L) amountInput else transactionAmount
 
-        val chargeRequest = ChargeRequest(
-            amount = finalAmount,
-            currency = "YER",
-            merchantId = DEFAULT_MERCHANT_ID,
-            atheerToken = capturedAtheerToken
-        )
+        val chargeRequest = ChargeRequest(amount = finalAmount, currency = "YER", merchantId = merchantId, atheerToken = capturedAtheerToken)
 
         lifecycleScope.launch {
             try {
                 val result = AtheerSdk.getInstance().charge(chargeRequest, "Bearer $accessToken")
 
                 result.onSuccess { response ->
-                    val intent = Intent(this@PosActivity, TransactionResultActivity::class.java).apply {
-                        putExtra(TransactionResultActivity.EXTRA_TRANSACTION_ID, response.transactionId)
-                        putExtra(TransactionResultActivity.EXTRA_AMOUNT, finalAmount / 100.0)
-                        putExtra(TransactionResultActivity.EXTRA_CURRENCY, "YER")
-                        putExtra(TransactionResultActivity.EXTRA_MERCHANT_ID, DEFAULT_MERCHANT_ID)
-                        putExtra(TransactionResultActivity.EXTRA_TIMESTAMP, transaction.timestamp)
-                        putExtra(TransactionResultActivity.EXTRA_IS_SUCCESS, true)
-                        putExtra(TransactionResultActivity.EXTRA_IS_SYNCED, true)
-                    }
-                    startActivity(intent)
-                    finish()
+                    navigateToResult(true, response.transactionId, finalAmount, null, null, transaction.timestamp)
                 }.onFailure { error ->
-                    binding.tvPosStatus.text = "خطأ: ${error.message}"
-                    binding.progressReading.visibility = View.GONE
+                    val errorMsg = error.message ?: ""
+                    var errorCode = "UNKNOWN"
+                    if (errorMsg.contains("غير كاف")) errorCode = "INSUFFICIENT_FUNDS"
+                    else if (errorMsg.contains("يتجاوز")) errorCode = "LIMIT_EXCEEDED"
+
+                    navigateToResult(false, null, finalAmount, errorCode, errorMsg, transaction.timestamp)
                 }
             } catch (e: Exception) {
-                binding.tvPosStatus.text = "خطأ: ${e.message}"
-                binding.progressReading.visibility = View.GONE
+                navigateToResult(false, null, finalAmount, "ERROR", e.message, transaction.timestamp)
             }
         }
     }
 
+    private fun navigateToResult(isSuccess: Boolean, txId: String?, amount: Long, errCode: String?, errMsg: String?, timestamp: Long) {
+        val intent = Intent(this, TransactionResultActivity::class.java).apply {
+            putExtra(TransactionResultActivity.EXTRA_IS_SUCCESS, isSuccess)
+            putExtra(TransactionResultActivity.EXTRA_TRANSACTION_ID, txId ?: "—")
+            putExtra(TransactionResultActivity.EXTRA_AMOUNT, amount.toDouble() / 100.0)
+            putExtra(TransactionResultActivity.EXTRA_CURRENCY, "YER")
+            putExtra(TransactionResultActivity.EXTRA_MERCHANT_ID, merchantId)
+            putExtra(TransactionResultActivity.EXTRA_TIMESTAMP, timestamp)
+            if (!isSuccess) {
+                putExtra("error_code", errCode)
+                putExtra("error_message", errMsg)
+            }
+        }
+        startActivity(intent)
+        finish()
+    }
+
     override fun onResume() {
         super.onResume()
-        checkNfcAvailability()
+        if (nfcAdapter == null) {
+            Toast.makeText(this, "هذا الجهاز لا يدعم NFC", Toast.LENGTH_SHORT).show()
+        }
     }
 
     override fun onPause() {
