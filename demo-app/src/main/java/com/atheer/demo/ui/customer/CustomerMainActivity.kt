@@ -1,6 +1,9 @@
 package com.atheer.demo.ui.customer
 
+import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -32,6 +35,31 @@ class CustomerMainActivity : AppCompatActivity() {
     private var isBalanceVisible = true
     private var currentBalance: Double = 0.0
 
+    // --- 1. تعريف مستقبل الإشعارات (BroadcastReceiver) ---
+    private val paymentReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            when (intent?.action) {
+                "com.atheer.sdk.ACTION_PAYMENT_REJECTED" -> {
+                    val requested = intent.getDoubleExtra("amount", 0.0)
+                    val limit = intent.getDoubleExtra("limit", 0.0)
+
+                    // إظهار تنبيه قوي للعميل بحدوث محاولة سحب زائدة
+                    AlertDialog.Builder(this@CustomerMainActivity)
+                        .setTitle("⚠️ حماية أثير - تم حظر العملية")
+                        .setMessage("حاول التاجر سحب مبلغ ($requested ريال)، وهو أعلى من السقف المالي الذي حددته ($limit ريال).\n\nتم إيقاف العملية لحماية أموالك.")
+                        .setPositiveButton("حسناً", null)
+                        .setIcon(android.R.drawable.ic_dialog_alert)
+                        .show()
+                }
+                "com.atheer.sdk.ACTION_NFC_TAP_SUCCESS" -> {
+                    Toast.makeText(this@CustomerMainActivity, "✅ تمت عملية الدفع بنجاح!", Toast.LENGTH_SHORT).show()
+                    // تحديث الرصيد تلقائياً بعد نجاح الدفع
+                    loadBalance()
+                }
+            }
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityCustomerMainBinding.inflate(layoutInflater)
@@ -43,10 +71,30 @@ class CustomerMainActivity : AppCompatActivity() {
         setupBalanceCard()
         setupAtheerPayButton()
 
+        // --- التعديل الجديد: تفعيل أزرار إعدادات الحماية اللاتلامسية ---
+        setupSettings()
+
         // جلب البيانات عند فتح الشاشة
         loadBalance()
         // جلب مفاتيح الدفع بصمت في الخلفية
         provisionOfflineTokens(showFeedback = false)
+    }
+
+    // --- 2. تسجيل المستقبل عند فتح التطبيق ---
+    override fun onResume() {
+        super.onResume()
+        val filter = IntentFilter().apply {
+            addAction("com.atheer.sdk.ACTION_PAYMENT_REJECTED")
+            addAction("com.atheer.sdk.ACTION_NFC_TAP_SUCCESS")
+        }
+        // استخدام RECEIVER_NOT_EXPORTED للأمان والتوافق مع أندرويد 14+
+        ContextCompat.registerReceiver(this, paymentReceiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
+    }
+
+    // --- 3. إيقاف المستقبل عند إغلاق التطبيق لتوفير البطارية ---
+    override fun onPause() {
+        super.onPause()
+        unregisterReceiver(paymentReceiver)
     }
 
     private fun setupBottomNavigation() {
@@ -56,7 +104,7 @@ class CustomerMainActivity : AppCompatActivity() {
                     binding.layoutHome.visibility = View.VISIBLE
                     binding.layoutHistory.visibility = View.GONE
                     binding.layoutSettings.visibility = View.GONE
-                    loadBalance() 
+                    loadBalance()
                     provisionOfflineTokens(showFeedback = false)
                     true
                 }
@@ -143,21 +191,21 @@ class CustomerMainActivity : AppCompatActivity() {
     private fun displayTransactions(transactions: List<com.atheer.demo.data.model.TransactionItem>) {
         val container = binding.rvHistory
         container.removeAllViews()
-        
+
         if (transactions.isEmpty()) {
             binding.tvHistoryEmpty.visibility = View.VISIBLE
             return
         }
-        
+
         binding.tvHistoryEmpty.visibility = View.GONE
 
         for (transaction in transactions) {
             val itemView = LayoutInflater.from(this).inflate(R.layout.item_transaction, container, false)
-            
+
             itemView.findViewById<TextView>(R.id.tvTxnAmount)?.text = "${transaction.amount} ${transaction.currency ?: "ر.س"}"
             itemView.findViewById<TextView>(R.id.tvTxnDate)?.text = transaction.createdAt ?: "بدون تاريخ"
             itemView.findViewById<TextView>(R.id.tvTxnStatus)?.text = if (transaction.type == "debit") "دفع" else "شحن"
-            
+
             container.addView(itemView)
         }
     }
@@ -251,6 +299,34 @@ class CustomerMainActivity : AppCompatActivity() {
         } else {
             Toast.makeText(this, "لا توجد مفاتيح جاهزة. جاري محاولة الجلب...", Toast.LENGTH_LONG).show()
             provisionOfflineTokens(showFeedback = true)
+        }
+    }
+
+    /**
+     * إعدادات حماية الدفع اللاتلامسي (الجدار الناري المحلي)
+     */
+    private fun setupSettings() {
+        binding.btnSaveLimit.setOnClickListener {
+            val limitText = binding.etOfflineLimit.text.toString()
+
+            if (limitText.isNotEmpty()) {
+                try {
+                    val amount = limitText.toInt()
+
+                    // استدعاء دالة الجدار الناري من الـ SDK
+                    AtheerSdk.getInstance().setNextOfflineLimit(amount)
+
+                    Toast.makeText(this, "تم تفعيل الحماية: أقصى سحب قادم هو $amount ريال", Toast.LENGTH_LONG).show()
+
+                    // مسح التركيز لإخفاء لوحة المفاتيح
+                    binding.etOfflineLimit.clearFocus()
+
+                } catch (e: NumberFormatException) {
+                    Toast.makeText(this, "الرجاء إدخال رقم صحيح", Toast.LENGTH_SHORT).show()
+                }
+            } else {
+                Toast.makeText(this, "الرجاء إدخال المبلغ أولاً", Toast.LENGTH_SHORT).show()
+            }
         }
     }
 }
